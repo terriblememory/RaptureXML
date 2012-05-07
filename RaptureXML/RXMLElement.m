@@ -190,12 +190,25 @@
     return text;
 }
 
+- (void)setText:(NSString *)text {
+    const xmlChar *textC = (const xmlChar *)[text cStringUsingEncoding:NSUTF8StringEncoding];
+    xmlNodeSetContent(node_, textC);
+}
+
 - (NSInteger)textAsInt {
     return [self.text intValue];
 }
 
+- (void)setTextAsInt:(NSInteger)textAsInt {
+    [self setText:[NSString stringWithFormat:@"%d", textAsInt]];
+}
+
 - (double)textAsDouble {
     return [self.text doubleValue];
+}
+
+- (void)setTextAsDouble:(double)textAsDouble {
+    [self setText:[NSString stringWithFormat:@"%f", textAsDouble]];
 }
 
 - (NSString *)attribute:(NSString *)attName {
@@ -470,6 +483,137 @@
     for (RXMLElement *iElement in elements) {
         blk(iElement);
     }
+}
+
+- (RXMLElement *)createElement:(NSString *)tag {
+    const xmlChar *tagC = (const xmlChar *)[tag cStringUsingEncoding:NSUTF8StringEncoding];
+    xmlNodePtr node = xmlNewDocNode(doc_, NULL, tagC, NULL);
+    RXMLElement *element = [[RXMLElement alloc] initFromXMLNode:node];
+    return element;
+}
+
+- (RXMLElement *)setElement:(NSString *)tag text:(NSString *)text {
+    NSArray *components = [tag componentsSeparatedByString:@"."];
+    xmlNodePtr cur = node_;
+    for (NSString *itag in components) {
+        const xmlChar *tagC = (const xmlChar *)[itag cStringUsingEncoding:NSUTF8StringEncoding];
+        xmlNodePtr parent = cur;
+        cur = cur->children;
+        while (cur != nil) {
+            if (cur->type == XML_ELEMENT_NODE && !xmlStrcmp(cur->name, tagC))
+                break;
+            cur = cur->next;
+        }
+        if (!cur) {
+            xmlNodePtr node = xmlNewDocNode(doc_, NULL, tagC, NULL);
+            xmlAddChild(parent, node);
+            cur = node;
+        }
+    }
+    if (cur) {
+        const xmlChar *textC = (const xmlChar *)[text cStringUsingEncoding:NSUTF8StringEncoding];
+        xmlNodeSetContent(cur, textC);
+    }
+    return [RXMLElement elementFromXMLNode:cur];
+}
+
+// Private helper method for the append/insert methods below.
+- (xmlNodePtr)getXmlNodePtr {
+    return node_;
+}
+
+- (RXMLElement *)appendChild:(RXMLElement *)element {
+    return xmlAddChild(node_, [element getXmlNodePtr]) ? element : nil;
+}
+
+- (RXMLElement *)insertChild:(RXMLElement *)element before:(RXMLElement *)referenceElement {
+    return xmlAddPrevSibling([referenceElement getXmlNodePtr], [element getXmlNodePtr]) ? element : nil;
+}
+
+- (RXMLElement *)insertChild:(RXMLElement *)element after:(RXMLElement *)referenceElement {
+    return xmlAddNextSibling([referenceElement getXmlNodePtr], [element getXmlNodePtr]) ? element : nil;
+}
+
+- (BOOL)deleteChild:(NSString *)tag {
+    // From the implementation of child: to keep the same semantics - i.e. you
+    // can delete a node further down the tree than the immediate children by
+    // using a dot separated path, e.g. "Foo.Bar.Zap" would delete Zap. Basic
+    // wildcarding is also supported, e.g. "Foo.*.Zap" would delete the first
+    // Zap it encounters (but only the first).
+    NSArray *components = [tag componentsSeparatedByString:@"."];
+    xmlNodePtr cur = node_;
+    
+    // navigate down
+    for (NSString *itag in components) {
+        const xmlChar *tagC = (const xmlChar *)[itag cStringUsingEncoding:NSUTF8StringEncoding];
+
+        if ([itag isEqualToString:@"*"]) {
+            cur = cur->children;
+            
+            while (cur != nil && cur->type != XML_ELEMENT_NODE) {
+                cur = cur->next;
+            }
+        } else {
+            cur = cur->children;
+            while (cur != nil) {
+                if (cur->type == XML_ELEMENT_NODE && !xmlStrcmp(cur->name, tagC)) {
+                    break;
+                }
+                
+                cur = cur->next;
+            }
+        }
+        
+        if (!cur) {
+            break;
+        }
+    }
+    
+    if (cur) {
+        xmlUnlinkNode(cur);
+        return YES;
+    }
+  
+    return NO;
+}
+
+- (BOOL)setAttribute:(NSString *)attributeName value:(NSString *)value {
+    const xmlChar *attributeNameC = (const xmlChar*)[attributeName cStringUsingEncoding:NSUTF8StringEncoding];
+    const xmlChar *valueC = (const xmlChar*)[value cStringUsingEncoding:NSUTF8StringEncoding];
+    return xmlSetProp(node_, attributeNameC, valueC) ? YES : NO;
+}
+
+- (BOOL)deleteAttribute:(NSString *)attributeName {
+    const xmlChar *attributeNameC = (const xmlChar*)[attributeName cStringUsingEncoding:NSUTF8StringEncoding];
+    return xmlUnsetProp(node_, attributeNameC) ? NO : YES;
+}
+
+- (BOOL) writeToURL:(NSURL*)url options:(RXMLWritingOptions)mask {
+    if (!doc_) {
+        // Can only save from the document element.
+        return NO;
+    }
+
+    BOOL result = NO;
+    xmlBufferPtr buf = xmlBufferCreate();
+    if (buf) {
+        xmlOutputBufferPtr outbuf = xmlOutputBufferCreateBuffer(buf, NULL);
+        if (outbuf) {
+            int format = 0;
+            if (mask & RXMLWritingOptionIndent)
+                format |= xmlIndentTreeOutput;
+            int length = xmlSaveFormatFileTo(outbuf, doc_, NULL, format);
+            if (length >= 0) {
+                NSData *data = [NSData dataWithBytesNoCopy:(void *)xmlBufferContent(buf) length:length];
+                if (data) {
+                    result = [[NSFileManager defaultManager] createFileAtPath:[url path] contents:data attributes:nil];
+                }
+            }
+        }
+        xmlBufferFree(buf);
+    }
+    
+    return result;
 }
 
 @end

@@ -30,6 +30,7 @@
 
 #import <Foundation/Foundation.h>
 #import <libxml2/libxml/xmlreader.h>
+#import <libxml2/libxml/xmlwriter.h>
 #import <libxml2/libxml/xmlmemory.h>
 #import <libxml/xpath.h>
 #import <libxml/xpathInternals.h>
@@ -74,10 +75,29 @@
 - (void)iterateElements:(NSArray *)elements usingBlock:(void (^)(RXMLElement *))blk;
 
 @property (nonatomic, readonly) NSString *tag;
-@property (nonatomic, readonly) NSString *text;
-@property (nonatomic, readonly) NSInteger textAsInt;
-@property (nonatomic, readonly) double textAsDouble;
+@property (nonatomic) NSString *text;
+@property (nonatomic) NSInteger textAsInt;
+@property (nonatomic) double textAsDouble;
 @property (nonatomic, readonly) BOOL isValid;
+
+- (RXMLElement *)createElement:(NSString *)tag;
+- (RXMLElement *)setElement:(NSString *)tag text:(NSString *)text;
+
+- (RXMLElement *)appendChild:(RXMLElement *)element;
+- (RXMLElement *)insertChild:(RXMLElement *)element before:(RXMLElement *)referenceElement;
+- (RXMLElement *)insertChild:(RXMLElement *)element after:(RXMLElement *)referenceElement;
+- (BOOL)deleteChild:(NSString *)tag;
+
+- (BOOL)setAttribute:(NSString *)attributeName value:(NSString *)value;
+- (BOOL)deleteAttribute:(NSString *)attributeName;
+
+enum {
+    RXMLWritingOptionNone = 0,
+    RXMLWritingOptionIndent = 1 << 0,
+};
+typedef NSUInteger RXMLWritingOptions;
+
+- (BOOL) writeToURL:(NSURL*)url options:(RXMLWritingOptions)mask;
 
 @end
 
