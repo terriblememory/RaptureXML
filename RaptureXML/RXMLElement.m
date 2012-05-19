@@ -604,7 +604,7 @@
                 format |= xmlIndentTreeOutput;
             int length = xmlSaveFormatFileTo(outbuf, doc_, NULL, format);
             if (length >= 0) {
-                NSData *data = [NSData dataWithBytesNoCopy:(void *)xmlBufferContent(buf) length:length];
+                NSData *data = [NSData dataWithBytesNoCopy:(void *)xmlBufferContent(buf) length:length freeWhenDone:NO];
                 if (data) {
                     result = [[NSFileManager defaultManager] createFileAtPath:[url path] contents:data attributes:nil];
                 }
