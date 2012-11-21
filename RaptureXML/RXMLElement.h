@@ -91,13 +91,21 @@
 - (BOOL)setAttribute:(NSString *)attributeName value:(NSString *)value;
 - (BOOL)deleteAttribute:(NSString *)attributeName;
 
-enum {
+typedef enum {
     RXMLWritingOptionNone = 0,
     RXMLWritingOptionIndent = 1 << 0,
-};
-typedef NSUInteger RXMLWritingOptions;
+} RXMLWritingOptions;
 
-- (BOOL) writeToURL:(NSURL*)url options:(RXMLWritingOptions)mask;
+typedef void (^RXMLWriteCompletionHandler)(BOOL success);
+
+- (NSString *)string;
+- (NSString *)stringWithOptions:(RXMLWritingOptions)mask;
+
+- (NSData *)data;
+- (NSData *)dataWithOptions:(RXMLWritingOptions)mask;
+
+- (void)writeToPath:(NSString *)path options:(RXMLWritingOptions)mask completion:(RXMLWriteCompletionHandler)handler;
+- (void)writeToURL:(NSURL*)url options:(RXMLWritingOptions)mask completion:(RXMLWriteCompletionHandler)handler;
 
 @end
 
