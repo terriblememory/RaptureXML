@@ -38,6 +38,7 @@
 @interface RXMLElement : NSObject {
     xmlDocPtr doc_;
     xmlNodePtr node_;
+	NSDictionary *attributes_;
 }
 
 - (id)initFromXMLString:(NSString *)xmlString encoding:(NSStringEncoding)encoding;
@@ -53,6 +54,10 @@
 + (id)elementFromURL:(NSURL *)url;
 + (id)elementFromXMLData:(NSData *)data;
 + (id)elementFromXMLNode:(xmlNodePtr)node;
+
++ (id)elementWithTag:(NSString *)tag;
+
+- (NSDictionary *)attributes;
 
 - (NSString *)attribute:(NSString *)attributeName;
 - (NSString *)attribute:(NSString *)attributeName inNamespace:(NSString *)ns;

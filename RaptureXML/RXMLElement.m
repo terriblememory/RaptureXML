@@ -211,6 +211,18 @@
     [self setText:[NSString stringWithFormat:@"%f", textAsDouble]];
 }
 
+- (NSDictionary *)attributes {
+	if (attributes_ == nil) {
+		NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
+		for(xmlAttrPtr attr = node_->properties; NULL != attr; attr = attr->next)	{
+			NSString *attributeName = [NSString stringWithUTF8String:(const char *)attr->name];
+			[attributes setObject:[self attribute:attributeName] forKey:attributeName];
+		}
+		attributes_ = [[NSDictionary alloc] initWithDictionary:attributes];
+	}
+	return attributes_;
+}
+
 - (NSString *)attribute:(NSString *)attName {
     NSString *ret = nil;
     const unsigned char *attCStr = xmlGetProp(node_, (const xmlChar *)[attName cStringUsingEncoding:NSUTF8StringEncoding]);
@@ -485,6 +497,13 @@
     for (RXMLElement *iElement in elements) {
         blk(iElement);
     }
+}
+
++ (id)elementWithTag:(NSString *)tag {
+	const xmlChar *tagC = (const xmlChar *)[tag cStringUsingEncoding:NSUTF8StringEncoding];
+    xmlNodePtr node = xmlNewDocNode(NULL, NULL, tagC, NULL);
+    RXMLElement *element = [[RXMLElement alloc] initFromXMLNode:node];
+    return element;
 }
 
 - (RXMLElement *)createElement:(NSString *)tag {
